@@ -27,16 +27,32 @@ if ($_GET['type'] == 'xml') {
 
 if (isset($_GET['method'])) {
     try {
-        $response = $client->call($_GET['method'], isset($_GET['params']) ? $_GET['params'] : array());
+        $params = (isset($_GET['params'])) ? $_GET['params'] : array();
+
+        if ($_GET['type'] == 'xml') {
+            $introspector = $client->getIntrospector();
+            $signature = $introspector->getMethodSignature($_GET['method']);
+            if (isset($signature[0]['parameters'])) {
+                foreach ($signature[0]['parameters'] as $index => $type) {
+                    if ($type == 'int') {
+                        $params[$index] = intval($params[$index]);
+                    }
+                }
+            }
+        }
+
+        $response = $client->call($_GET['method'], $params);
         var_dump($response);
     } catch (Zend\XmlRpc\Client\Exception\FaultException $e) {
         echo "<h3>Server Fault</h3>";
         echo $e->getMessage();
+        echo $client->getHttpClient()->getResponse();
     } catch (Zend\Json\Server\Exception\ExceptionInterface $e) {
         echo "<h3>Server Fault</h3>";
         echo $e->getMessage();
     } catch (Exception $e) {
         echo "<h3>Request Error</h3>";
+        echo $client->getHttpClient()->getResponse();
         echo $e->getMessage();
     }
     echo "<hr />";
